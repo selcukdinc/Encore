@@ -1,11 +1,16 @@
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { prepareUpdate } from './prepare-update.mjs';
 
 if (process.platform !== 'win32')
   throw new Error('The Encore NSIS installer must be built on Windows.');
 const root = fileURLToPath(new URL('../../../', import.meta.url));
 const ui = fileURLToPath(new URL('../', import.meta.url));
+if (!process.env.TAURI_SIGNING_PRIVATE_KEY) {
+  throw new Error('Set TAURI_SIGNING_PRIVATE_KEY to the original Encore updater key before building. See docs/updates.md.');
+}
+process.env.TAURI_SIGNING_PRIVATE_KEY_PASSWORD ??= '';
 if (
   !existsSync(
     fileURLToPath(new URL('../../../tools/ffmpeg.exe', import.meta.url)),
@@ -45,3 +50,9 @@ run(
   ui,
 );
 console.log('Installer ready in target/release/bundle/nsis/');
+prepareUpdate();
+run('cargo', [
+  'test', '--locked', '--release', '-p', 'encore-ui',
+  '--test', 'update_signature', '--', '--ignored',
+], root);
+console.log('Update signature verified against the public key shipped in Encore.');
