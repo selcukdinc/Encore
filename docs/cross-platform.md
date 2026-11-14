@@ -7,9 +7,9 @@ Work on `dev`. `main` is the production branch. Preview workflows upload develop
 | Target | Package | Current implementation |
 | --- | --- | --- |
 | Windows x64 | Existing signed NSIS installer | Full recorder, library, editor, and signed updates |
-| Apple Silicon macOS | ARM64 `.app` / `.dmg` | Library/editor preview; native recording pending |
-| Ubuntu 24.04+ x64 | `.deb` | Library/editor preview; native recording pending |
-| Linux x64 via Flatpak | Development `.flatpak` bundle | Packaging manifest and workflow; native recording pending |
+| Apple Silicon macOS | ARM64 `.app` / `.dmg` | Experimental OBS recorder; packaged encoder/replay tests pass; real-device startup failure under investigation |
+| Ubuntu 24.04 x64 | `.deb` | Experimental OBS recorder, X11/Wayland capture, PipeWire application audio; native acceptance tests in progress |
+| Linux x64 via Flatpak | Development `.flatpak` bundle | Source-built OBS runtime and portal integration; sandbox build/test still pending |
 
 Intel Macs and Linux ARM64 are outside the initial scope. The initial macOS preview targets macOS 15+ to match the ARM64 build environment and bundled Homebrew dependencies; supporting older releases requires separately built and verified dependencies. Preview artifacts must pass real-device checks before being presented as supported releases.
 
@@ -18,13 +18,15 @@ Intel Macs and Linux ARM64 are outside the initial scope. The initial macOS prev
 - `crates/common/src/platform/windows`: existing Registry autostart, Toolhelp process metadata, named-pipe IPC, and WASAPI device discovery.
 - `crates/common/src/ipc.rs`: shared JSON request/response types, independent of transport.
 - `crates/common/src/platform/mod.rs`: configuration/video paths, resource lookup, helper processes, file-manager integration, and capability reporting.
-- `apps/recorder/src/windows.rs`: the existing Windows recorder entry point and capture modules. Non-Windows builds explicitly report unavailable recording and exit unsuccessfully; they do not simulate capture.
+- `apps/recorder/src/windows.rs`: the existing Windows recorder entry point and capture modules.
+- `apps/recorder/src/native`: Unix supervisor, bounded save queue, native FFI ownership, IPC, and graceful shutdown.
+- `native/obs`: OBS window/audio sources and encoders, the MP4 mux bridge, native menu lifecycle, and Linux desktop portals. The OBS GUI is not launched.
 - `apps/ui/src-tauri/src/platform`: native picker and updater implementations. Portable previews use manual/package-manager updates and never query the production Windows updater feed.
-- `crates/editor/src/clipboard`: native file clipboard implementations. Windows uses CF_HDROP, macOS uses AppleScript with the filename passed as an argument. Linux clipboard sharing is disabled in the first preview; use Save Trim and Show in folder.
+- `crates/editor/src/clipboard`: Windows CF_HDROP and macOS AppleScript file sharing. Linux sharing runs through `apps/ui/src-tauri/src/platform/linux_clipboard.rs` on the GTK main thread, with file MIME targets and the File Transfer portal for sandbox access.
 
 Windows configuration and clip IDs retain their existing behavior. macOS uses its Application Support directory; Linux follows XDG configuration/video paths, including Flatpak's redirected config directory. Unix clip identifiers preserve case-sensitive filenames.
 
-The React app reads capabilities from Rust. Preview builds expose library, folder selection, themes, audio mixing, trimming, crop/vertical export, and montage. They hide recording controls, application capture settings, login startup, and the Windows updater.
+The React app reads capabilities from Rust. Builds with the native runtime expose experimental recording, application audio, and login startup. Builds without it retain the library/editor preview. Native builds use manual/package-manager updates and never query the Windows updater feed. Wayland uses the system window-sharing dialog and Global Shortcuts portal; it cannot follow arbitrary focused windows. Select the game's audio application explicitly on Wayland because the window portal does not identify its owner.
 
 ## Build a preview
 
@@ -35,9 +37,10 @@ Common prerequisites: Rust, Node.js, npm, and FFmpeg with H.264/AAC support and 
 On an ARM64 Mac with Xcode Command Line Tools:
 
 ```sh
-brew install ffmpeg
+brew install ffmpeg cmake pkg-config
 npm --prefix apps/ui ci
 python3 apps/ui/scripts/prepare-macos-ffmpeg.py
+python3 native/obs/prepare-macos.py
 npm --prefix apps/ui run build:preview
 ```
 
@@ -47,8 +50,9 @@ The preparation script copies FFmpeg and its non-system Homebrew dylibs, rewrite
 
 ```sh
 sudo apt-get update
-sudo apt-get install -y build-essential libwebkit2gtk-4.1-dev libssl-dev librsvg2-dev libxdo-dev ffmpeg gstreamer1.0-libav gstreamer1.0-plugins-good gstreamer1.0-plugins-bad
+sudo apt-get install -y build-essential cmake pkg-config libwebkit2gtk-4.1-dev libssl-dev librsvg2-dev libxdo-dev ffmpeg gstreamer1.0-libav gstreamer1.0-plugins-good gstreamer1.0-plugins-bad libobs-dev obs-studio libavformat-dev libavcodec-dev libavutil-dev libgtk-3-dev libwayland-dev libayatana-appindicator3-dev libpipewire-0.3-dev
 npm --prefix apps/ui ci
+python3 native/obs/prepare-linux.py
 npm --prefix apps/ui run build:preview
 ```
 
@@ -65,15 +69,28 @@ flatpak install --user target/Encore-linux-x86_64-dev.flatpak
 flatpak run com.encore.clipper
 ```
 
-This local development manifest packages the compiled binary against GNOME runtime 49 and builds pinned x264/FFmpeg sources inside the SDK. The manifest grants the Videos directory; other locations require the folder chooser/portal or an explicit permission. FFmpeg cannot access files outside the sandbox merely because the host can. A Flathub submission will require a source-build manifest with vendored Cargo/npm dependencies and store metadata; the local binary manifest is not a Flathub submission.
+This development manifest packages the compiled Rust binaries against GNOME runtime 51 and builds pinned x264, FFmpeg, OBS, application-audio and native-bridge sources inside the SDK. The manifest grants the Videos directory; other locations require the folder chooser/portal or an explicit permission. FFmpeg cannot access files outside the sandbox merely because the host can. A Flathub submission will require vendored Cargo/npm source builds and store metadata; the development binary manifest is not a Flathub submission.
 
 ## CI and publication
 
-`platform-checks.yml` checks the native workspace and runs shared/media/library tests on Windows, Apple Silicon, and Ubuntu. `ui-checks.yml` also runs on pushes to `dev`. To build downloadable development artifacts, manually run **Platform checks** on `dev` with `build_previews` enabled.
+`platform-checks.yml` checks the native workspace and runs shared/media/library tests on Windows, Apple Silicon, and Ubuntu. Pushes to `dev` also build native development packages and verify relocated packages. The Mac OBS job uses macOS 26; baseline library tests also cover macOS 15. `ui-checks.yml` runs on pushes to `dev`.
 
 Once recording backends and native acceptance checks pass, attach each platform package to one versioned GitHub Release. Keep development previews away from the existing production `latest.json`. Flatpak updates belong to its repository/package manager.
 
+## Mac recorder diagnostics
+
+Install development packages in Applications before testing. The recorder log is
+`~/Library/Application Support/Encore/recorder.log`; launches append to it and
+the library records the helper's exit status while it remains running. The log
+includes startup phases and the helper's bundle identity/privacy declarations.
+For a crash after startup, share the end of this log and, if necessary, the
+matching macOS DiagnosticReports crash report. A successful synthetic test does
+not establish screen/microphone permission or real capture correctness.
+
 ## References
+
+- [OpenScreenStudio design reference, pinned revision](https://github.com/Glyph-Software/OpenScreenStudio/tree/9b257aca7c44d7a3da5034fb72658e3b0cf2d35a) — AGPL-3.0; consulted for application permission/lifecycle design, without incorporating its implementation.
+- [Apple capture authorization requirements](https://developer.apple.com/documentation/avfoundation/requesting-authorization-to-capture-and-save-media)
 
 - [Tauri platform configuration](https://v2.tauri.app/reference/config/)
 - [Tauri Flatpak packaging](https://v2.tauri.app/distribute/flatpak/)
