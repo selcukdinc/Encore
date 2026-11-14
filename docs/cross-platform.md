@@ -7,7 +7,7 @@ Work on `dev`. `main` is the production branch. Preview workflows upload develop
 | Target | Package | Current implementation |
 | --- | --- | --- |
 | Windows x64 | Existing signed NSIS installer | Full recorder, library, editor, and signed updates |
-| Apple Silicon macOS | ARM64 `.app` / `.dmg` | Experimental OBS recorder; packaged encoder/replay tests pass; real-device startup failure under investigation |
+| Apple Silicon macOS | ARM64 `.app` / `.dmg` | Experimental OBS recorder; real-device device-discovery crash identified and fixed; repeated discovery regression and device retest pending |
 | Ubuntu 24.04 x64 | `.deb` | Experimental OBS recorder, X11/Wayland capture, PipeWire application audio; native acceptance tests in progress |
 | Linux x64 via Flatpak | Development `.flatpak` bundle | Source-built OBS runtime and portal integration; sandbox build/test still pending |
 
