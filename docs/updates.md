@@ -1,6 +1,6 @@
 # Encore in-app updates
 
-The UI checks once per launch, and Settings → App updates offers a manual check.
+The UI checks once per launch, and Settings â†’ App updates offers a manual check.
 There is no updater timer, service, or dependency in `encore-recorder`. No package
 is downloaded until the user confirms **Update and restart**. Offline checks leave
 capture and the library usable; Settings shows the error and lets the user retry.
@@ -44,7 +44,10 @@ This update signature is separate from optional Windows Authenticode signing.
    `npm --prefix apps/ui run prepare:update`.
 4. Create a **draft** GitHub release in `yancelic/Encore` with the exact tag
    `v<version>`. Attach the matching `Encore_<version>_x64-setup.exe`, its `.sig`,
-   and `latest.json`. Never attach a private key. Check all three before publishing.
+   and `latest.json`. For releases supporting macOS, also attach the matching
+   `Encore_<version>_aarch64.dmg` from the successful Stable packages tag workflow.
+   Add `SHA256SUMS.txt` covering all assets. Never attach a private key. Verify
+   versions, source commit and checksums before publishing.
 5. Publish the stable release and make it the latest release. The app checks
    `https://github.com/yancelic/Encore/releases/latest/download/latest.json`.
    The manifest references the versioned installer URL, not a moving download URL.
