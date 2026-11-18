@@ -25,7 +25,7 @@ TEXT_RULES = {
     "API token": re.compile(r"\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{30,}"),
     "messaging token": re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{20,}"),
     "private chat link": re.compile(r"(?:codex|plugin)://|https://chatgpt\.com/c/", re.I),
-    "session note": re.compile(r"\b(?:for\s+this\s+local\s+development\s+session|local\s+backup:|pending\s+from\s+the\s+user)(?=\s|$)", re.I),
+    "session note": re.compile(r"\b(?:for\s+this\s+local\s+development\s+session|local\s+backup:|pending\s+from\s+the\s+user)(?!\w)", re.I),
     "obsolete task branch": re.compile(r"\bcodex/(?:dev|release)-[\w./-]+"),
     "unpublished feature note": re.compile(r"\b(?:later|future|planned)\s+editor\s+features\b", re.I),
     "private planning heading": re.compile(r"^#{1,6}\s+(?:(?:internal|private)\s+(?:notes|planning)|(?:feature\s+)?backlog|roadmap|future\s+features)\b", re.I | re.M),
