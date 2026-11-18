@@ -218,7 +218,7 @@ jobs:
           sudo apt-get -o Acquire::Retries=3 -o Dpkg::Use-Pty=0 install -y cmake pkg-config g++ libobs-dev obs-studio ffmpeg libavformat-dev libavcodec-dev libavutil-dev libgtk-3-dev libwayland-dev libayatana-appindicator3-dev libpipewire-0.3-dev libwebkit2gtk-4.1-dev libssl-dev librsvg2-dev libxdo-dev xvfb openbox x11-utils dbus-x11
       # rust-cache deletes every file under target/ when it restores a partial match (a new
       # Rust release or Cargo.lock change), including the bridge build and its test fixture.
-      # Restore it before anything else writes to target/.
+      # Restore it before anything else writes to target/; the bridge then starts clean.
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -226,6 +226,8 @@ jobs:
           save-if: ${{ env.ENCORE_SAVE_CACHE == 'true' }}
       - name: Compile capture and mux bridge
         run: |
+          # The restored cache can hold an empty skeleton of this directory; build from scratch.
+          rm -rf -- target/native-obs-linux
           python3 native/obs/prepare-linux.py
           ctest --test-dir target/native-obs-linux/bridge-build --output-on-failure
       - uses: actions/setup-node@v4
