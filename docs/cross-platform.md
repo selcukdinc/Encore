@@ -196,6 +196,18 @@ new push. The Windows stable installer and updater are managed separately.
 
 Once recording backends and native acceptance checks pass, attach each platform package to one versioned GitHub Release. Keep development previews away from the existing production `latest.json`. Flatpak updates belong to its repository/package manager.
 
+## Validation limits
+
+Automated checks cover controlled X11 capture, native replay, GTK clipboard
+formats, and synthetic Flatpak sandbox recording. Ubuntu and Flatpak remain beta:
+real-device capture, Wayland portals, hardware encoders, application audio,
+playback, and sandbox file transfer still require verification. Consult the
+[Linux beta test guide](linux-beta-testing.md) when reporting a problem.
+
+macOS is stable on supported Apple Silicon Macs. Capture permissions and real
+login behavior require validation on the target device; generated permission or
+LaunchAgent data alone does not establish that those operating-system flows work.
+
 ## Mac recorder diagnostics
 
 Install development packages in Applications before testing. The recorder log is

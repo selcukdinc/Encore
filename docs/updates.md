@@ -1,6 +1,6 @@
 # Encore in-app updates
 
-The UI checks once per launch, and Settings â†’ App updates offers a manual check.
+The UI checks once per launch, and Settings → App updates offers a manual check.
 There is no updater timer, service, or dependency in `encore-recorder`. No package
 is downloaded until the user confirms **Update and restart**. Offline checks leave
 capture and the library usable; Settings shows the error and lets the user retry.
