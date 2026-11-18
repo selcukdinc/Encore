@@ -52,7 +52,7 @@ class ContentTests(unittest.TestCase):
         self.assertFalse(checker.inspect_file("icon.bgra", b"\0\x01\xff"))
 
     def test_rejects_session_notes_and_unpublished_proposals(self):
-        texts = ["Local " + "backup: disk copy", "pending from " + "the user",
+        texts = ["Local " + "backup: disk copy", "pending from " + "the user.",
                  "later editor " + "features such as effects", "## " + "Feature backlog\nPlans",
                  "codex/" + "release-1.2.3", "https://" + "chatgpt.com/c/example",
                  ".local-backups/" + "updater/" + "secret.key"]
