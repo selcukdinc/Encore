@@ -44,8 +44,11 @@ window receives `TaskbarCreated` and restores the icon after Explorer restarts.
 An explicitly hidden tray stays hidden during recovery.
 
 macOS writes `~/Library/LaunchAgents/com.encore.recorder.plist` with `RunAtLoad`.
-Packaged builds use `/usr/bin/open -g -W -a` to launch the inner **Encore Recorder.app**
-through LaunchServices, matching manual launch and its privacy identity. Disabling
+launchd runs the executable inside the inner **Encore Recorder.app** directly, so the
+recorder is its own responsible process and keeps the Encore Recorder privacy identity,
+as with a manual launch. Because the executable lives inside `Encore.app`, Login Items
+lists the entry as **Encore** even without a Developer ID Team ID (launching through
+`/usr/bin/open` would list it as "open"). Disabling
 the setting removes the plist for future logins; it does not stop an active recorder.
 Keep Encore installed at the registered location (normally `/Applications`) and
 allow its background item in System Settings if macOS requests approval. Screen,
